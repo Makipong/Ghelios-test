@@ -142,6 +142,37 @@
                 border-radius: 2px;
             }
 
+            .tabs {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                padding: 10px 14px;
+                border: 1px solid #e0e6ed;
+                border-radius: 10px;
+                background: #fff;
+                color: var(--primary);
+                cursor: pointer;
+                font-weight: 600;
+            }
+
+            .tab-btn.active {
+                background: var(--secondary);
+                color: #fff;
+                border-color: var(--secondary);
+            }
+
+            .tab-pane {
+                display: none;
+            }
+
+            .tab-pane.active {
+                display: block;
+            }
+
             .admin-controls {
                 background: #f8fafc;
                 padding: 12px;
@@ -727,165 +758,235 @@
             </header>
 
             <div class="content">
-                <!-- Trip Selection Section -->
-                <div class="trip-selector">
-                    <div class="trip-selector-title">
-                        <i class="fas fa-calendar-alt"></i>
-                        Выбор рейса для управления
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-item">
-                            <label class="filter-label">Активный рейс:</label>
-                            <select id="activeTripSelector">
-                                <option value="">Выберите рейс...</option>
-                            </select>
-                        </div>
-                        <div class="filter-item">
-                            <label class="filter-label">Действие:</label>
-                            <button
-                                id="loadTripBtn"
-                                class="action-btn"
-                                style="
-                                    background: var(--secondary);
-                                    color: white;
-                                    margin-top: 0;
-                                "
-                            >
-                                <i class="fas fa-download"></i>
-                                Загрузить рейс
-                            </button>
-                            <button
-                                id="loadAllTripsBtn"
-                                class="action-btn"
-                                style="
-                                    background: var(--success);
-                                    color: white;
-                                    margin-top: 5px;
-                                "
-                                onclick="loadAllTripsStatistics()"
-                            >
-                                <i class="fas fa-chart-bar"></i>
-                                Общая статистика
-                            </button>
-                        </div>
-                    </div>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="bookingsTab"><i class="fas fa-list"></i> Бронирования</button>
+                    <button class="tab-btn" data-tab="createTripTab"><i class="fas fa-plus-circle"></i> Создать рейс</button>
+                    <button class="tab-btn" data-tab="statsTab"><i class="fas fa-chart-bar"></i> Статистика и бухгалтерия</button>
+                    <button class="tab-btn" data-tab="codeLookupTab"><i class="fas fa-qrcode"></i> Поиск по коду</button>
                 </div>
 
-                <!-- Admin Controls -->
-                <div class="admin-controls">
-                    <h3 class="section-title">
-                        <i class="fas fa-filter"></i>
-                        Фильтры и статистика
-                    </h3>
-
-                    <div class="admin-filters">
+                <div id="bookingsTab" class="tab-pane active">
+                    <div class="trip-selector">
+                        <div class="trip-selector-title"><i class="fas fa-calendar-alt"></i>Выбор рейса для управления</div>
                         <div class="filter-row">
                             <div class="filter-item">
-                                <label class="filter-label">Период от:</label>
-                                <input type="date" id="dateFrom" />
-                            </div>
-                            <div class="filter-item">
-                                <label class="filter-label">Период до:</label>
-                                <input type="date" id="dateTo" />
-                            </div>
-                        </div>
-
-                        <div class="filter-row">
-                            <div class="filter-item">
-                                <label class="filter-label">Статус:</label>
-                                <select id="statusFilter">
-                                    <option value="">Все статусы</option>
-                                    <option value="свободно">Свободно</option>
-                                    <option value="забронировано">
-                                        Забронировано
-                                    </option>
-                                    <option value="подтверждено">
-                                        Подтверждено
-                                    </option>
+                                <label class="filter-label">Активный рейс:</label>
+                                <select id="activeTripSelector">
+                                    <option value="">Выберите рейс...</option>
                                 </select>
                             </div>
                             <div class="filter-item">
-                                <label class="filter-label">Направление:</label>
-                                <select id="routeFilter">
-                                    <option value="">Все направления</option>
-                                    <option value="Молдова → Россия">
-                                        Молдова → Россия
-                                    </option>
-                                    <option value="Россия → Молдова">
-                                        Россия → Молдова
-                                    </option>
-                                </select>
+                                <label class="filter-label">Действие:</label>
+                                <button id="loadTripBtn" class="action-btn" style="background:var(--secondary);color:#fff;margin-top:0">
+                                    <i class="fas fa-download"></i> Загрузить рейс
+                                </button>
+                                <button id="loadAllTripsBtn" class="action-btn" style="background:var(--success);color:#fff;margin-top:5px" onclick="loadAllTripsStatistics()">
+                                    <i class="fas fa-chart-bar"></i> Общая статистика
+                                </button>
                             </div>
                         </div>
-
-                        <button
-                            id="applyFiltersBtn"
-                            class="action-btn"
-                            style="
-                                background: var(--primary);
-                                color: white;
-                                margin-top: 10px;
-                            "
-                        >
-                            <i class="fas fa-search"></i>
-                            Применить фильтры
-                        </button>
                     </div>
 
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <h3><i class="fas fa-chair"></i> Всего мест</h3>
-                            <div class="value" id="totalSeats">-</div>
+                    <div id="currentTripInfo" class="trip-selector" style="display:none">
+                        <div class="trip-selector-title">
+                            <i class="fas fa-info-circle"></i>
+                            Текущий рейс: <span id="currentTripDate">-</span>
                         </div>
-                        <div class="stat-card booked">
-                            <h3><i class="fas fa-clock"></i> Забронировано</h3>
-                            <div class="value" id="bookedSeats">-</div>
-                        </div>
-                        <div class="stat-card confirmed">
-                            <h3>
-                                <i class="fas fa-check-circle"></i> Подтверждено
-                            </h3>
-                            <div class="value" id="confirmedSeats">-</div>
-                        </div>
-                        <div class="stat-card free">
-                            <h3><i class="fas fa-check"></i> Свободно</h3>
-                            <div class="value" id="freeSeats">-</div>
+                    </div>
+
+                    <div class="bookings-list" id="bookingsList">
+                        <div class="no-data">
+                            <i class="fas fa-bus" style="font-size:3rem;margin-bottom:15px;color:#ddd"></i>
+                            <h3>Выберите рейс для отображения бронирований</h3>
+                            <p>Используйте селектор выше для выбора активного рейса</p>
                         </div>
                     </div>
 
                     <button class="export-btn" onclick="exportToExcel()">
-                        <i class="fas fa-file-excel"></i>
-                        Экспорт в Excel
+                        <i class="fas fa-file-excel"></i> Экспорт в Excel
                     </button>
                 </div>
 
-                <!-- Current Trip Info -->
-                <div
-                    id="currentTripInfo"
-                    class="trip-selector"
-                    style="display: none"
-                >
-                    <div class="trip-selector-title">
-                        <i class="fas fa-info-circle"></i>
-                        Текущий рейс: <span id="currentTripDate">-</span>
+                <div id="createTripTab" class="tab-pane">
+                    <div class="trip-selector">
+                        <div class="trip-selector-title"><i class="fas fa-plus"></i>Создать рейс</div>
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label class="filter-label">Дата рейса</label>
+                                <input type="date" id="newTripDate" />
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Направление</label>
+                                <select id="newTripDirection">
+                                    <option value="">Авто по дню недели</option>
+                                    <option value="Молдова → Россия">Молдова → Россия</option>
+                                    <option value="Россия → Молдова">Россия → Молдова</option>
+                                </select>
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Базовая цена (лей)</label>
+                                <input type="number" id="newTripBasePrice" placeholder="500" />
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label class="filter-label">Расходы: топливо</label>
+                                <input type="number" id="newFuelCost" />
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Расходы: еда пассажирам</label>
+                                <input type="number" id="newFoodCost" />
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Прочие расходы</label>
+                                <input type="number" id="newOtherCosts" />
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label class="filter-label">Еда водителям</label>
+                                <input type="number" id="newDriverFoodCost" />
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Базовая валюта</label>
+                                <select id="newBaseCurrency">
+                                    <option value="">Не указано</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="MDL">MDL</option>
+                                    <option value="RUB">RUB</option>
+                                </select>
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Курс EUR→MDL</label>
+                                <input type="number" id="newRateEurMdl" step="0.0001" />
+                            </div>
+                            <div class="filter-item">
+                                <label class="filter-label">Курс EUR→RUB</label>
+                                <input type="number" id="newRateEurRub" step="0.0001" />
+                            </div>
+                        </div>
+                        <button class="action-btn" style="background:var(--secondary);color:#fff" onclick="createTripFromAdmin()">
+                            <i class="fas fa-save"></i> Создать рейс
+                        </button>
                     </div>
                 </div>
 
-                <!-- Bookings List -->
-                <div class="bookings-list" id="bookingsList">
-                    <div class="no-data">
-                        <i
-                            class="fas fa-bus"
-                            style="
-                                font-size: 3rem;
-                                margin-bottom: 15px;
-                                color: #ddd;
-                            "
-                        ></i>
-                        <h3>Выберите рейс для отображения бронирований</h3>
-                        <p>
-                            Используйте селектор выше для выбора активного рейса
-                        </p>
+                <div id="statsTab" class="tab-pane">
+                    <div class="admin-controls">
+                        <h3 class="section-title"><i class="fas fa-filter"></i>Фильтры и статистика</h3>
+
+                        <div class="admin-filters">
+                            <div class="filter-row">
+                                <div class="filter-item">
+                                    <label class="filter-label">Период от:</label>
+                                    <input type="date" id="dateFrom" />
+                                </div>
+                                <div class="filter-item">
+                                    <label class="filter-label">Период до:</label>
+                                    <input type="date" id="dateTo" />
+                                </div>
+                            </div>
+
+                            <div class="filter-row">
+                                <div class="filter-item">
+                                    <label class="filter-label">Статус:</label>
+                                    <select id="statusFilter">
+                                        <option value="">Все статусы</option>
+                                        <option value="свободно">Свободно</option>
+                                        <option value="забронировано">Забронировано</option>
+                                        <option value="подтверждено">Подтверждено</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label class="filter-label">Направление:</label>
+                                    <select id="routeFilter">
+                                        <option value="">Все направления</option>
+                                        <option value="Молдова → Россия">Молдова → Россия</option>
+                                        <option value="Россия → Молдова">Россия → Молдова</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button id="applyFiltersBtn" class="action-btn" style="background:var(--primary);color:#fff;margin-top:10px">
+                                <i class="fas fa-search"></i> Применить фильтры
+                            </button>
+                        </div>
+
+                        <div class="stats-cards">
+                            <div class="stat-card">
+                                <h3><i class="fas fa-chair"></i> Всего мест</h3>
+                                <div class="value" id="totalSeats">-</div>
+                            </div>
+                            <div class="stat-card booked">
+                                <h3><i class="fas fa-clock"></i> Забронировано</h3>
+                                <div class="value" id="bookedSeats">-</div>
+                            </div>
+                            <div class="stat-card confirmed">
+                                <h3><i class="fas fa-check-circle"></i> Подтверждено</h3>
+                                <div class="value" id="confirmedSeats">-</div>
+                            </div>
+                            <div class="stat-card free">
+                                <h3><i class="fas fa-check"></i> Свободно</h3>
+                                <div class="value" id="freeSeats">-</div>
+                            </div>
+                        </div>
+
+                                      <div class="trip-selector">
+              <div class="trip-selector-title"><i class="fas fa-calculator"></i>Параметры рейса</div>
+              <div class="filter-row">
+                <div class="filter-item">
+                  <label class="filter-label">Дата рейса</label>
+                  <select id="settingsTripSelector">
+                    <option value="">Выберите рейс...</option>
+                  </select>
+                </div>
+                <div class="filter-item">
+                  <label class="filter-label">Направление</label>
+                  <select id="settingsDirection">
+                    <option value="Молдова → Россия">Молдова → Россия</option>
+                    <option value="Россия → Молдова">Россия → Молдова</option>
+                  </select>
+                </div>
+                <div class="filter-item">
+                  <label class="filter-label">Базовая цена</label>
+                  <input id="settingsBasePrice" type="number" />
+                </div>
+              </div>
+              <div class="filter-row">
+                <div class="filter-item"><label class="filter-label">Расход топливо</label><input id="settingsFuelCost" type="number" /></div>
+                <div class="filter-item"><label class="filter-label">Еда пассажирам</label><input id="settingsFoodCost" type="number" /></div>
+                <div class="filter-item"><label class="filter-label">Доп расходы</label><input id="settingsOtherCosts" type="number" /></div>
+              </div>
+              <div class="filter-row">
+                <div class="filter-item"><label class="filter-label">Еда водителям</label><input id="settingsDriverFoodCost" type="number" /></div>
+                <div class="filter-item"><label class="filter-label">База валюта</label>
+                  <select id="settingsBaseCurrency"><option value="EUR">EUR</option><option value="MDL">MDL</option><option value="RUB">RUB</option></select>
+                </div>
+                <div class="filter-item"><label class="filter-label">Курс EUR→MDL</label><input id="settingsRateEurMdl" type="number" step="0.0001" /></div>
+                <div class="filter-item"><label class="filter-label">Курс EUR→RUB</label><input id="settingsRateEurRub" type="number" step="0.0001" /></div>
+              </div>
+              <button class="action-btn" style="background:var(--success);color:#fff" onclick="saveTripSettingsFromAdmin()"><i class="fas fa-save"></i> Сохранить параметры</button>
+              <div class="trip-selector" style="margin-top:12px">
+                <div class="trip-selector-title"><i class="fas fa-file-invoice-dollar"></i>Сводка по рейсу</div>
+                <div id="accountingSummary" class="booking-details"></div>
+              </div>
+            </div>
+                    </div>
+                </div>
+
+                <div id="codeLookupTab" class="tab-pane">
+                    <div class="trip-selector">
+                        <div class="trip-selector-title"><i class="fas fa-qrcode"></i>Поиск брони по коду</div>
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label class="filter-label">Код брони</label>
+                                <input type="text" id="lookupCode" placeholder="Например, AB2C3D7" />
+                            </div>
+                            <div class="filter-item" style="align-self:flex-end">
+                                <button class="action-btn" style="background:var(--primary);color:#fff" onclick="lookupByCode(false)"><i class="fas fa-search"></i> Найти</button>
+                            </div>
+                        </div>
+                        <div id="lookupResult"></div>
                     </div>
                 </div>
             </div>
@@ -896,157 +997,76 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">Редактировать бронирование</h3>
-                    <button class="modal-close" onclick="closeEditModal()">
-                        &times;
-                    </button>
+                    <button class="modal-close" onclick="closeEditModal()">&times;</button>
                 </div>
                 <form id="editForm">
-                    <div class="form-group">
-                        <label class="form-label">Имя пассажира</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            id="editName"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Телефон</label>
-                        <input
-                            type="tel"
-                            class="form-input"
-                            id="editPhone"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input
-                            type="email"
-                            class="form-input"
-                            id="editEmail"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Город посадки</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            id="editFromCity"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Город высадки</label>
-                        <input
-                            type="text"
-                            class="form-input"
-                            id="editToCity"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Вес багажа (кг)</label>
-                        <input
-                            type="number"
-                            class="form-input"
-                            id="editLuggageWeight"
-                            min="0"
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Мест багажа</label>
-                        <input
-                            type="number"
-                            class="form-input"
-                            id="editLuggagePieces"
-                            min="0"
-                        />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Фактическая оплата</label>
-                        <input
-                            type="number"
-                            class="form-input"
-                            id="editActualPrice"
-                            min="0"
-                            step="0.01"
-                        />
-                    </div>
+                    <div class="form-group"><label class="form-label">Имя пассажира</label><input type="text" class="form-input" id="editName" required /></div>
+                    <div class="form-group"><label class="form-label">Телефон</label><input type="tel" class="form-input" id="editPhone" required /></div>
+                    <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="editEmail" required /></div>
+                    <div class="form-group"><label class="form-label">Город посадки</label><input type="text" class="form-input" id="editFromCity" required /></div>
+                    <div class="form-group"><label class="form-label">Город высадки</label><input type="text" class="form-input" id="editToCity" required /></div>
+                    <div class="form-group"><label class="form-label">Вес багажа (кг)</label><input type="number" class="form-input" id="editLuggageWeight" min="0" /></div>
+                    <div class="form-group"><label class="form-label">Мест багажа</label><input type="number" class="form-input" id="editLuggagePieces" min="0" /></div>
+                    <div class="form-group"><label class="form-label">Фактическая оплата</label><input type="number" class="form-input" id="editActualPrice" min="0" step="0.01" /></div>
                     <div class="form-actions">
-                        <button
-                            type="button"
-                            class="btn-modal cancel"
-                            onclick="closeEditModal()"
-                        >
-                            Отмена
-                        </button>
-                        <button type="submit" class="btn-modal save">
-                            Сохранить
-                        </button>
+                        <button type="button" class="btn-modal cancel" onclick="closeEditModal()">Отмена</button>
+                        <button type="submit" class="btn-modal save">Сохранить</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Loader -->
         <div class="loader-container" id="loader">
             <div class="loader"></div>
             <div class="loader-text">Загрузка данных...</div>
         </div>
 
         <script>
-            // Configuration
-            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwftwfVoO4mWrnWUDTn4MQh1a0cMHZOYGwL8duboH6UD9_CzHlo-2qY5CWNnbkm8JjkwQ/exec';
+            const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4mxF8WVsobklKyE82Woe4fFeD6lvN7WoynwDvhC1D3FPBnlsOs9iuvQ_ByYPDdjX3aQ/exec';
 
-            // Global variables
             let currentTripDate = null;
             let allBookings = [];
             let filteredBookings = [];
             let availableTrips = [];
             let tripSettings = {};
 
-            // Initialize the application
             document.addEventListener("DOMContentLoaded", function () {
                 initializeApp();
                 setupEventListeners();
+                setupTabs();
             });
 
-            function setupEventListeners() {
-                document
-                    .getElementById("loadTripBtn")
-                    .addEventListener("click", loadSelectedTrip);
-                document
-                    .getElementById("applyFiltersBtn")
-                    .addEventListener("click", applyFilters);
-                document
-                    .getElementById("editForm")
-                    .addEventListener("submit", saveEditedBooking);
-
-                // Auto-apply filters when date range changes
-                document
-                    .getElementById("dateFrom")
-                    .addEventListener("change", applyFilters);
-                document
-                    .getElementById("dateTo")
-                    .addEventListener("change", applyFilters);
-                document
-                    .getElementById("statusFilter")
-                    .addEventListener("change", applyFilters);
-                document
-                    .getElementById("routeFilter")
-                    .addEventListener("change", applyFilters);
-                    
-                // Trip selector change event
-                document
-                    .getElementById("activeTripSelector")
-                    .addEventListener("change", function() {
-                        const selectedValue = this.value;
-                        if (selectedValue === "") {
-                            loadAllTripsStatistics();
-                        }
+            function setupTabs() {
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+                        document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+                        btn.classList.add('active');
+                        const tab = btn.getAttribute('data-tab');
+                        document.getElementById(tab).classList.add('active');
                     });
+                });
+            }
+
+            function setupEventListeners() {
+                document.getElementById("loadTripBtn").addEventListener("click", loadSelectedTrip);
+                document.getElementById("applyFiltersBtn").addEventListener("click", applyFilters);
+                document.getElementById("editForm").addEventListener("submit", saveEditedBooking);
+
+                ["dateFrom","dateTo","statusFilter","routeFilter"].forEach(id=>{
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener("change", applyFilters);
+                });
+
+                document.getElementById("activeTripSelector").addEventListener("change", function() {
+                    if (this.value === "") {
+                        document.getElementById("currentTripInfo").style.display = "none";
+                        allBookings = [];
+                        filteredBookings = [];
+                        updateStatistics();
+                        renderBookings([]);
+                    }
+                });
             }
 
             async function initializeApp() {
@@ -1054,65 +1074,59 @@
                 try {
                     await loadAvailableTrips();
                     setDefaultDateRange();
-                    // Load overall statistics by default
-                    await loadAllTripsStatistics();
+                    // Заполняем селектор настроек
+                    const settingsSel = document.getElementById('settingsTripSelector');
+                    settingsSel.innerHTML = '<option value="">Выберите рейс...</option>';
+                    availableTrips.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=formatTripDate(d); settingsSel.appendChild(o); });
+                    settingsSel.addEventListener('change', loadTripSettingsIntoForm);
                 } catch (error) {
                     console.error("Initialization error:", error);
-                    showError("Ошибка загрузки данных: " + error.message);
+                    showError("Ошибка загрузки данных: " + (error.message || error));
                 } finally {
                     hideLoader();
                 }
             }
 
-            // Load statistics for all trips at once
             async function loadAllTripsStatistics() {
                 try {
                     showLoader("Загрузка общей статистики...");
-                    
-                    // Clear current data
                     allBookings = [];
-                    
-                    // Load all trips data
-                    for (const tripDate of availableTrips) {
-                        try {
-                            const tripData = await makeGoogleScriptRequest("getSeats", { tripDate });
-                            // Add tripDate to each booking for filtering
-                            const bookingsWithDate = (tripData || []).map(booking => ({
-                                ...booking,
-                                tripDate: tripDate
-                            }));
-                            allBookings.push(...bookingsWithDate);
-                        } catch (error) {
-                            console.warn(`Failed to load trip ${tripDate}:`, error);
-                        }
-                    }
-                    
-                    // Reset current trip selection since we're showing all trips
+
+                    const results = await Promise.all(
+                        availableTrips.map(tripDate =>
+                            makeGoogleScriptRequest("getSeats", { tripDate })
+                                .then(tripData => (tripData || []).map(b => ({ ...b, tripDate })))
+                                .catch(err => {
+                                    console.warn(`Не удалось загрузить рейс ${tripDate}:`, err);
+                                    return [];
+                                })
+                        )
+                    );
+
+                    allBookings = results.flat();
+
                     currentTripDate = null;
                     document.getElementById("activeTripSelector").value = "";
                     document.getElementById("currentTripInfo").style.display = "none";
-                    
-                    // Apply filters to show all data
+
                     applyFilters();
-                    
                 } catch (error) {
                     console.error("Error loading all trips statistics:", error);
-                    showError("Ошибка загрузки общей статистики: " + error.message);
+                    showError("Ошибка загрузки общей статистики: " + (error.message || error));
+                } finally {
+                    hideLoader();
                 }
             }
 
             async function loadAvailableTrips() {
                 try {
-                    const response =
-                        await makeGoogleScriptRequest("getTripDates");
+                    const response = await makeGoogleScriptRequest("getTripDates");
                     availableTrips = response || [];
 
-                    const selector =
-                        document.getElementById("activeTripSelector");
-                    selector.innerHTML =
-                        '<option value="">Выберите рейс...</option>';
+                    const selector = document.getElementById("activeTripSelector");
+                    selector.innerHTML = '<option value="">Выберите рейс...</option>';
 
-                    availableTrips.forEach((tripDate) => {
+                    availableTrips.forEach(tripDate => {
                         const option = document.createElement("option");
                         option.value = tripDate;
                         option.textContent = formatTripDate(tripDate);
@@ -1120,23 +1134,17 @@
                     });
 
                     if (availableTrips.length === 0) {
-                        showError(
-                            "Рейсы не найдены. Создайте новый рейс через систему бронирования.",
-                        );
+                        showError("Рейсы не найдены. Создайте новый рейс через систему бронирования или вкладку Создать рейс.");
                     }
                 } catch (error) {
-                    throw new Error(
-                        "Не удалось загрузить список рейсов: " + error.message,
-                    );
+                    throw new Error("Не удалось загрузить список рейсов: " + (error.message || error));
                 }
             }
 
             async function loadSelectedTrip() {
                 const selectedTrip = document.getElementById("activeTripSelector").value;
-                
+
                 if (!selectedTrip) {
-                    // Load all trips statistics if no specific trip selected
-                    await loadAllTripsStatistics();
                     return;
                 }
 
@@ -1145,9 +1153,9 @@
                     currentTripDate = selectedTrip;
                     await loadTripData(selectedTrip);
                     updateCurrentTripInfo(selectedTrip);
-                    applyFilters(); // Apply current filters to the new data
+                    applyFilters();
                 } catch (error) {
-                    showError("Ошибка загрузки рейса: " + error.message);
+                    showError("Ошибка загрузки рейса: " + (error.message || error));
                 } finally {
                     hideLoader();
                 }
@@ -1155,59 +1163,36 @@
 
             async function loadTripData(tripDate) {
                 try {
-                    const response = await makeGoogleScriptRequest("getSeats", {
-                        tripDate,
-                    });
+                    const response = await makeGoogleScriptRequest("getSeats", { tripDate });
                     allBookings = response || [];
 
-                    // Also load trip settings for route information
-                    const tripSettings = await makeGoogleScriptRequest(
-                        "getTripSettings",
-                        { tripDate },
-                    );
-                    if (tripSettings && tripSettings.direction) {
-                        // Update route filter if we have direction info
-                        const routeFilter =
-                            document.getElementById("routeFilter");
-                        if (
-                            ![...routeFilter.options].some(
-                                (opt) => opt.value === tripSettings.direction,
-                            )
-                        ) {
+                    const tSettings = await makeGoogleScriptRequest("getTripSettings", { tripDate });
+                    if (tSettings && tSettings.direction) {
+                        const routeFilter = document.getElementById("routeFilter");
+                        if (routeFilter && ![...routeFilter.options].some(opt => opt.value === tSettings.direction)) {
                             const option = document.createElement("option");
-                            option.value = tripSettings.direction;
-                            option.textContent = tripSettings.direction;
+                            option.value = tSettings.direction;
+                            option.textContent = tSettings.direction;
                             routeFilter.appendChild(option);
                         }
                     }
                 } catch (error) {
-                    throw new Error(
-                        "Не удалось загрузить данные рейса: " + error.message,
-                    );
+                    throw new Error("Не удалось загрузить данные рейса: " + (error.message || error));
                 }
             }
 
             function updateCurrentTripInfo(tripDate) {
-                document.getElementById("currentTripDate").textContent =
-                    formatTripDate(tripDate);
-                document.getElementById("currentTripInfo").style.display =
-                    "block";
+                document.getElementById("currentTripDate").textContent = formatTripDate(tripDate);
+                document.getElementById("currentTripInfo").style.display = "block";
             }
 
             function setDefaultDateRange() {
                 const today = new Date();
-                const oneMonthAgo = new Date(today);
-                oneMonthAgo.setMonth(today.getMonth() - 1);
+                const oneMonthAgo = new Date(today); oneMonthAgo.setMonth(today.getMonth() - 1);
+                const oneMonthFromNow = new Date(today); oneMonthFromNow.setMonth(today.getMonth() + 1);
 
-                const oneMonthFromNow = new Date(today);
-                oneMonthFromNow.setMonth(today.getMonth() + 1);
-
-                document.getElementById("dateFrom").value = oneMonthAgo
-                    .toISOString()
-                    .split("T")[0];
-                document.getElementById("dateTo").value = oneMonthFromNow
-                    .toISOString()
-                    .split("T")[0];
+                document.getElementById("dateFrom").value = oneMonthAgo.toISOString().split("T")[0];
+                document.getElementById("dateTo").value = oneMonthFromNow.toISOString().split("T")[0];
             }
 
             function applyFilters() {
@@ -1223,30 +1208,17 @@
                 const routeFilter = document.getElementById("routeFilter").value;
 
                 filteredBookings = allBookings.filter((booking) => {
-                    // Date filter - use tripDate from booking data
                     if (dateFrom && dateTo && booking.tripDate) {
                         const bookingDate = new Date(booking.tripDate);
                         const fromDate = new Date(dateFrom);
                         const toDate = new Date(dateTo);
-                        
-                        if (bookingDate < fromDate || bookingDate > toDate) {
-                            return false;
-                        }
+                        if (bookingDate < fromDate || bookingDate > toDate) return false;
                     }
 
-                    // Status filter
-                    if (statusFilter && booking.status !== statusFilter) {
-                        return false;
-                    }
+                    if (statusFilter && booking.status !== statusFilter) return false;
 
-                    // Route filter (this would need to be enhanced based on trip settings)
                     if (routeFilter) {
-                        // For now, we'll check if the booking has matching from/to cities
-                        // This could be improved by loading trip settings
-                        const isRouteMatch = checkRouteMatch(
-                            booking,
-                            routeFilter,
-                        );
+                        const isRouteMatch = checkRouteMatch(booking, routeFilter);
                         if (!isRouteMatch) return false;
                     }
 
@@ -1258,66 +1230,42 @@
             }
 
             function checkRouteMatch(booking, routeFilter) {
-                // Basic route matching logic
                 if (routeFilter === "Молдова → Россия") {
-                    return (
-                        booking.fromCity &&
-                        booking.toCity &&
-                        (booking.fromCity.toLowerCase().includes("молдов") ||
-                            booking.toCity.toLowerCase().includes("росси"))
-                    );
+                    return booking.fromCity && booking.toCity &&
+                           (booking.fromCity.toLowerCase().includes("молдов") || booking.toCity.toLowerCase().includes("росси"));
                 }
                 if (routeFilter === "Россия → Молдова") {
-                    return (
-                        booking.fromCity &&
-                        booking.toCity &&
-                        (booking.fromCity.toLowerCase().includes("росси") ||
-                            booking.toCity.toLowerCase().includes("молдов"))
-                    );
+                    return booking.fromCity && booking.toCity &&
+                           (booking.fromCity.toLowerCase().includes("росси") || booking.toCity.toLowerCase().includes("молдов"));
                 }
                 return true;
             }
 
             function updateStatistics() {
-                const bookings = filteredBookings.length
-                    ? filteredBookings
-                    : allBookings;
-
+                const bookings = filteredBookings.length ? filteredBookings : allBookings;
                 const total = bookings.length;
-                const booked = bookings.filter(
-                    (b) => b.status === "забронировано",
-                ).length;
-                const confirmed = bookings.filter(
-                    (b) => b.status === "подтверждено",
-                ).length;
-                const free = bookings.filter(
-                    (b) => b.status === "свободно",
-                ).length;
+                const booked = bookings.filter(b => b.status === "забронировано").length;
+                const confirmed = bookings.filter(b => b.status === "подтверждено").length;
+                const free = bookings.filter(b => b.status === "свободно").length;
 
-                document.getElementById("totalSeats").textContent = total;
-                document.getElementById("bookedSeats").textContent = booked;
-                document.getElementById("confirmedSeats").textContent =
-                    confirmed;
-                document.getElementById("freeSeats").textContent = free;
+                document.getElementById("totalSeats").textContent = total || "-";
+                document.getElementById("bookedSeats").textContent = booked || "-";
+                document.getElementById("confirmedSeats").textContent = confirmed || "-";
+                document.getElementById("freeSeats").textContent = free || "-";
             }
 
             function renderBookings(bookings) {
                 const container = document.getElementById("bookingsList");
-
                 if (!bookings.length) {
                     container.innerHTML = `
-                    <div class="no-data">
-                        <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
-                        <h3>Нет данных для отображения</h3>
-                        <p>Измените фильтры или выберите другой рейс</p>
-                    </div>
-                `;
+                        <div class="no-data">
+                            <i class="fas fa-search" style="font-size:3rem;margin-bottom:15px;color:#ddd;"></i>
+                            <h3>Нет данных для отображения</h3>
+                            <p>Измените фильтры на вкладке Статистика или выберите другой рейс</p>
+                        </div>`;
                     return;
                 }
-
-                container.innerHTML = bookings
-                    .map((booking) => createBookingCard(booking))
-                    .join("");
+                container.innerHTML = bookings.map((booking) => createBookingCard(booking)).join("");
             }
 
             function createBookingCard(booking) {
@@ -1327,144 +1275,72 @@
                 return `
                 <div class="booking-card ${isEmpty ? "compact" : ""}">
                     <div class="card-header">
-                        <div class="seat-info">
-                            <div class="seat-number">${booking.seat}</div>
-                        </div>
+                        <div class="seat-info"><div class="seat-number">${booking.seat}</div></div>
                         <span class="status-badge ${statusClass}">${booking.status}</span>
                     </div>
-                    
                     ${
                         !isEmpty
                             ? `
                         <div class="booking-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Пассажир</span>
-                                <span class="detail-value">${booking.name || "-"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Телефон</span>
-                                <span class="detail-value">${booking.phone || "-"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Email</span>
-                                <span class="detail-value">${booking.email || "-"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Маршрут</span>
-                                <span class="detail-value">${booking.fromCity || "-"} → ${booking.toCity || "-"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Цена / Оплачено</span>
-                                <span class="detail-value">${booking.basePrice || "-"} / ${booking.actualPrice || "-"}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Багаж</span>
-                                <span class="detail-value">${booking.luggageWeight || 0} кг (${booking.luggagePieces || 0} мест)</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Дата рейса</span>
-                                <span class="detail-value">${booking.tripDate ? formatTripDate(booking.tripDate) : (currentTripDate ? formatTripDate(currentTripDate) : "-")}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Дата бронирования</span>
-                                <span class="detail-value">${booking.time || "-"}</span>
-                            </div>
+                            <div class="detail-item"><span class="detail-label">Пассажир</span><span class="detail-value">${booking.name || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Телефон</span><span class="detail-value">${booking.phone || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${booking.email || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Маршрут</span><span class="detail-value">${booking.fromCity || "-"} → ${booking.toCity || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Цена / Оплачено</span><span class="detail-value">${booking.basePrice || "-"} / ${booking.actualPrice || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Багаж</span><span class="detail-value">${booking.luggageWeight || 0} кг (${booking.luggagePieces || 0} мест)</span></div>
+                            <div class="detail-item"><span class="detail-label">Дата рейса</span><span class="detail-value">${booking.tripDate ? formatTripDate(booking.tripDate) : (currentTripDate ? formatTripDate(currentTripDate) : "-")}</span></div>
+                            <div class="detail-item"><span class="detail-label">Дата бронирования</span><span class="detail-value">${booking.time || "-"}</span></div>
+                            <div class="detail-item"><span class="detail-label">Код брони</span><span class="detail-value">${booking.code || "-"}</span></div>
                         </div>
-                        
                         <div class="action-btns">
-                            ${
-                                booking.status === "забронировано"
-                                    ? `
+                            ${ booking.status === "забронировано" ? `
                                 <button class="action-btn confirm" onclick="confirmBooking('${booking.tripDate || currentTripDate}', ${booking.seat})">
                                     <i class="fas fa-check"></i> Подтвердить
-                                </button>
-                            `
-                                    : ""
-                            }
-                            
-                            <button class="action-btn edit" onclick="editBooking(${booking.seat})">
-                                <i class="fas fa-edit"></i> Редактировать
-                            </button>
-                            
-                            <button class="action-btn cancel" onclick="cancelBooking('${booking.tripDate || currentTripDate}', ${booking.seat})">
-                                <i class="fas fa-times"></i> Отменить
-                            </button>
-                            
-                            ${
-                                booking.phone
-                                    ? `
-                                <button class="action-btn whatsapp" onclick="openWhatsApp('${booking.phone}')">
-                                    <i class="fab fa-whatsapp"></i> WhatsApp
-                                </button>
-                                <button class="action-btn telegram" onclick="openTelegram('${booking.phone}')">
-                                    <i class="fab fa-telegram"></i> Telegram
-                                </button>
-                                <button class="action-btn call" onclick="makeCall('${booking.phone}')">
-                                    <i class="fas fa-phone"></i> Позвонить
-                                </button>
-                            `
-                                    : ""
-                            }
-                        </div>
-                    `
-                            : ""
-                    }
-                </div>
-            `;
+                                </button>` : "" }
+                            <button class="action-btn edit" onclick="editBooking(${booking.seat})"><i class="fas fa-edit"></i> Редактировать</button>
+                            <button class="action-btn cancel" onclick="cancelBooking('${booking.tripDate || currentTripDate}', ${booking.seat})"><i class="fas fa-times"></i> Отменить</button>
+                            ${ booking.phone ? `
+                                <button class="action-btn whatsapp" onclick="openWhatsApp('${booking.phone}')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                                <button class="action-btn telegram" onclick="openTelegram('${booking.phone}')"><i class="fab fa-telegram"></i> Telegram</button>
+                                <button class="action-btn call" onclick="makeCall('${booking.phone}')"><i class="fas fa-phone"></i> Позвонить</button>` : "" }
+                        </div>` : "" }
+                </div>`;
             }
 
             function getStatusClass(status) {
                 switch (status) {
-                    case "забронировано":
-                        return "status-booked";
-                    case "подтверждено":
-                        return "status-confirmed";
-                    case "свободно":
-                        return "status-free";
-                    default:
-                        return "status-free";
+                    case "забронировано": return "status-booked";
+                    case "подтверждено": return "status-confirmed";
+                    case "свободно": return "status-free";
+                    default: return "status-free";
                 }
             }
 
-            // Booking Actions
             async function confirmBooking(tripDate, seat) {
                 if (!confirm("Подтвердить бронирование?")) return;
-
                 showLoader("Подтверждение бронирования...");
                 try {
-                    await makeGoogleScriptRequest("confirmBooking", {
-                        tripDate,
-                        seat,
-                    });
+                    await makeGoogleScriptRequest("confirmBooking", { tripDate, seat });
                     await loadTripData(tripDate);
                     applyFilters();
                     showSuccess("Бронирование подтверждено");
                 } catch (error) {
-                    showError("Ошибка подтверждения: " + error.message);
+                    showError("Ошибка подтверждения: " + (error.message || error));
                 } finally {
                     hideLoader();
                 }
             }
 
             async function cancelBooking(tripDate, seat) {
-                if (
-                    !confirm(
-                        "Отменить бронирование? Это действие нельзя отменить.",
-                    )
-                )
-                    return;
-
+                if (!confirm("Отменить бронирование? Это действие нельзя отменить.")) return;
                 showLoader("Отмена бронирования...");
                 try {
-                    await makeGoogleScriptRequest("cancelBooking", {
-                        tripDate,
-                        seat,
-                    });
+                    await makeGoogleScriptRequest("cancelBooking", { tripDate, seat });
                     await loadTripData(tripDate);
                     applyFilters();
                     showSuccess("Бронирование отменено");
                 } catch (error) {
-                    showError("Ошибка отмены: " + error.message);
+                    showError("Ошибка отмены: " + (error.message || error));
                 } finally {
                     hideLoader();
                 }
@@ -1473,32 +1349,20 @@
             function editBooking(seat) {
                 const booking = allBookings.find((b) => b.seat === seat);
                 if (!booking) return;
-
-                // Populate edit form
                 document.getElementById("editName").value = booking.name || "";
-                document.getElementById("editPhone").value =
-                    booking.phone || "";
-                document.getElementById("editEmail").value =
-                    booking.email || "";
-                document.getElementById("editFromCity").value =
-                    booking.fromCity || "";
-                document.getElementById("editToCity").value =
-                    booking.toCity || "";
-                document.getElementById("editLuggageWeight").value =
-                    booking.luggageWeight || "";
-                document.getElementById("editLuggagePieces").value =
-                    booking.luggagePieces || "";
-                document.getElementById("editActualPrice").value =
-                    booking.actualPrice || "";
-
-                // Store current seat for saving
+                document.getElementById("editPhone").value = booking.phone || "";
+                document.getElementById("editEmail").value = booking.email || "";
+                document.getElementById("editFromCity").value = booking.fromCity || "";
+                document.getElementById("editToCity").value = booking.toCity || "";
+                document.getElementById("editLuggageWeight").value = booking.luggageWeight || "";
+                document.getElementById("editLuggagePieces").value = booking.luggagePieces || "";
+                document.getElementById("editActualPrice").value = booking.actualPrice || "";
                 document.getElementById("editForm").dataset.seat = seat;
                 document.getElementById("editModal").classList.add("active");
             }
 
             async function saveEditedBooking(event) {
                 event.preventDefault();
-
                 const seat = event.target.dataset.seat;
                 const formData = {
                     tripDate: currentTripDate,
@@ -1508,12 +1372,9 @@
                     email: document.getElementById("editEmail").value,
                     fromCity: document.getElementById("editFromCity").value,
                     toCity: document.getElementById("editToCity").value,
-                    luggageWeight:
-                        document.getElementById("editLuggageWeight").value,
-                    luggagePieces:
-                        document.getElementById("editLuggagePieces").value,
-                    actualPrice:
-                        document.getElementById("editActualPrice").value,
+                    luggageWeight: document.getElementById("editLuggageWeight").value,
+                    luggagePieces: document.getElementById("editLuggagePieces").value,
+                    actualPrice: document.getElementById("editActualPrice").value,
                 };
 
                 showLoader("Сохранение изменений...");
@@ -1524,48 +1385,28 @@
                     closeEditModal();
                     showSuccess("Бронирование обновлено");
                 } catch (error) {
-                    showError("Ошибка сохранения: " + error.message);
+                    showError("Ошибка сохранения: " + (error.message || error));
                 } finally {
                     hideLoader();
                 }
             }
 
-            function closeEditModal() {
-                document.getElementById("editModal").classList.remove("active");
-            }
+            function closeEditModal() { document.getElementById("editModal").classList.remove("active"); }
 
-            // Communication functions
-            function openWhatsApp(phone) {
-                const cleanPhone = phone.replace(/\D/g, "");
-                window.open(`https://wa.me/${cleanPhone}`, "_blank");
-            }
+            function openWhatsApp(phone) { window.open(`https://wa.me/${phone.replace(/\D/g,"")}`, "_blank"); }
+            function openTelegram(phone) { window.open(`https://t.me/+${phone.replace(/\D/g,"")}`, "_blank"); }
+            function makeCall(phone) { window.open(`tel:${phone}`, "_self"); }
 
-            function openTelegram(phone) {
-                const cleanPhone = phone.replace(/\D/g, "");
-                window.open(`https://t.me/+${cleanPhone}`, "_blank");
-            }
-
-            function makeCall(phone) {
-                window.open(`tel:${phone}`, "_self");
-            }
-
-            // Export functionality
             function exportToExcel() {
-                if (!filteredBookings.length && !allBookings.length) {
-                    showError("Нет данных для экспорта");
-                    return;
-                }
-
-                const dataToExport = filteredBookings.length
-                    ? filteredBookings
-                    : allBookings;
+                if (!filteredBookings.length && !allBookings.length) { showError("Нет данных для экспорта"); return; }
+                const dataToExport = filteredBookings.length ? filteredBookings : allBookings;
                 const worksheet = XLSX.utils.json_to_sheet(
                     dataToExport.map((booking) => ({
-                        Место: booking.seat,
-                        Статус: booking.status,
-                        Имя: booking.name || "",
-                        Телефон: booking.phone || "",
-                        Email: booking.email || "",
+                        "Место": booking.seat,
+                        "Статус": booking.status,
+                        "Имя": booking.name || "",
+                        "Телефон": booking.phone || "",
+                        "Email": booking.email || "",
                         "Город посадки": booking.fromCity || "",
                         "Город высадки": booking.toCity || "",
                         "Базовая цена": booking.basePrice || "",
@@ -1574,177 +1415,134 @@
                         "Мест багажа": booking.luggagePieces || "",
                         "Доплата за багаж": booking.luggageExtra || "",
                         "Дата бронирования": booking.time || "",
+                        "Код брони": booking.code || ""
                     })),
                 );
-
                 const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(
-                    workbook,
-                    worksheet,
-                    "Бронирования",
-                );
-
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Бронирования");
                 const filename = `bookings_${currentTripDate || "filtered"}_${new Date().toISOString().split("T")[0]}.xlsx`;
                 XLSX.writeFile(workbook, filename);
             }
 
-            // Google Script API with demo mode support
             async function makeGoogleScriptRequest(action, params = {}) {
-                // Demo mode - return mock data for development
-                // Connect to Google Apps Script API
-
                 try {
                     const url = new URL(GOOGLE_SCRIPT_URL);
                     url.searchParams.set("action", action);
+                    Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined) url.searchParams.set(k, v); });
 
-                    Object.entries(params).forEach(([key, value]) => {
-                        if (value !== null && value !== undefined) {
-                            url.searchParams.set(key, value);
-                        }
-                    });
-
-                    const response = await fetch(url, {
-                        method: "GET",
-                        mode: "cors",
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(
-                            `HTTP error! status: ${response.status}`,
-                        );
-                    }
+                    const response = await fetch(url, { method: "GET", mode: "cors" });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                     const data = await response.json();
 
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-
+                    if (data && data.error) throw new Error(data.error);
                     return data;
                 } catch (error) {
                     console.error(`API call failed:`, error);
-                    throw new Error(`Ошибка API: ${error.message}`);
+                    throw new Error(`Ошибка API: ${error.message || error}`);
                 }
             }
 
-            // Demo data for development and testing
-            function getDemoData(action, params) {
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        switch (action) {
-                            case "getTripDates":
-                                resolve([
-                                    "2025-08-15",
-                                    "2025-08-20",
-                                    "2025-08-25",
-                                ]);
-                                break;
-                            case "getSeats":
-                                const seats = [];
-                                for (let i = 1; i <= 60; i++) {
-                                    const statuses = [
-                                        "свободно",
-                                        "забронировано",
-                                        "подтверждено",
-                                    ];
-                                    const status =
-                                        statuses[Math.floor(Math.random() * 3)];
-                                    seats.push({
-                                        seat: i,
-                                        status: status,
-                                        name:
-                                            status !== "свободно"
-                                                ? `Пассажир ${i}`
-                                                : "",
-                                        phone:
-                                            status !== "свободно"
-                                                ? `+373 69 ${String(i).padStart(2, "0")} ${String((i * 7) % 100).padStart(2, "0")} ${String((i * 13) % 100).padStart(2, "0")}`
-                                                : "",
-                                        email:
-                                            status !== "свободно"
-                                                ? `passenger${i}@email.com`
-                                                : "",
-                                        time:
-                                            status !== "свободно"
-                                                ? new Date().toLocaleString()
-                                                : "",
-                                        fromCity:
-                                            status !== "свободно"
-                                                ? "Кишинев"
-                                                : "",
-                                        toCity:
-                                            status !== "свободно"
-                                                ? "Москва"
-                                                : "",
-                                        basePrice: 150,
-                                        actualPrice:
-                                            status !== "свободно" ? 150 : 0,
-                                        luggageWeight:
-                                            status !== "свободно"
-                                                ? Math.floor(
-                                                      Math.random() * 30,
-                                                  ) + 20
-                                                : 0,
-                                        luggagePieces:
-                                            status !== "свободно"
-                                                ? Math.floor(
-                                                      Math.random() * 3,
-                                                  ) + 1
-                                                : 0,
-                                        luggageExtra: 0,
-                                        comments: "",
-                                    });
-                                }
-                                resolve(seats);
-                                break;
-                            case "getTripSettings":
-                                resolve({
-                                    direction: "Молдова → Россия",
-                                    basePrice: 150,
-                                    fuelCost: 500,
-                                    foodCost: 200,
-                                    otherCosts: 100,
-                                });
-                                break;
-                            default:
-                                resolve({ success: true });
-                        }
-                    }, 500); // Simulate network delay
-                });
-            }
-
-            // Utility functions
             function formatTripDate(dateString) {
                 try {
                     const date = new Date(dateString);
-                    return date.toLocaleDateString("ru-RU", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                    });
-                } catch {
-                    return dateString;
-                }
+                    return date.toLocaleDateString("ru-RU", { year:"numeric", month:"long", day:"numeric" });
+                } catch { return dateString; }
+            }
+
+            // Create Trip Tab actions
+            async function createTripFromAdmin() {
+                const tripDate = document.getElementById('newTripDate').value;
+                if (!tripDate) { showError('Укажите дату'); return; }
+                const direction = document.getElementById('newTripDirection').value;
+                const basePrice = document.getElementById('newTripBasePrice').value || 500;
+                const fuelCost = document.getElementById('newFuelCost').value || 0;
+                const foodCost = document.getElementById('newFoodCost').value || 0;
+                const otherCosts = document.getElementById('newOtherCosts').value || 0;
+                const driverFoodCost = document.getElementById('newDriverFoodCost').value || 0;
+                const baseCurrency = document.getElementById('newBaseCurrency').value || '';
+                const rateEurMdl = document.getElementById('newRateEurMdl').value || '';
+                const rateEurRub = document.getElementById('newRateEurRub').value || '';
+                showLoader('Создание рейса...');
+                try {
+                    await makeGoogleScriptRequest('createTrip', { tripDate, direction, basePrice });
+                    await makeGoogleScriptRequest('updateTripSettings', { tripDate, direction, basePrice, fuelCost, foodCost, otherCosts, driverFoodCost, baseCurrency, rateEurMdl, rateEurRub });
+                    await loadAvailableTrips();
+                    showSuccess('Рейс создан');
+                } catch (e) { showError(e.message || e); } finally { hideLoader(); }
+            }
+
+            async function loadTripSettingsIntoForm() {
+                const tripDate = document.getElementById('settingsTripSelector').value;
+                if (!tripDate) return;
+                showLoader('Загрузка параметров...');
+                try {
+                    const s = await makeGoogleScriptRequest('getTripSettings', { tripDate });
+                    if (s) {
+                        document.getElementById('settingsDirection').value = s.direction || 'Молдова → Россия';
+                        document.getElementById('settingsBasePrice').value = s.basePrice || '';
+                        document.getElementById('settingsFuelCost').value = s.fuelCost || '';
+                        document.getElementById('settingsFoodCost').value = s.foodCost || '';
+                        document.getElementById('settingsOtherCosts').value = s.otherCosts || '';
+                        document.getElementById('settingsDriverFoodCost').value = s.driverFoodCost || '';
+                        document.getElementById('settingsBaseCurrency').value = s.baseCurrency || 'EUR';
+                        document.getElementById('settingsRateEurMdl').value = s.rateEurMdl || '';
+                        document.getElementById('settingsRateEurRub').value = s.rateEurRub || '';
+                    }
+                } catch (e) { console.warn(e); } finally { hideLoader(); }
+            }
+
+            async function saveTripSettingsFromAdmin() {
+                const tripDate = document.getElementById('settingsTripSelector').value;
+                if (!tripDate) { showError('Выберите рейс'); return; }
+                const direction = document.getElementById('settingsDirection').value;
+                const basePrice = document.getElementById('settingsBasePrice').value;
+                const fuelCost = document.getElementById('settingsFuelCost').value;
+                const foodCost = document.getElementById('settingsFoodCost').value;
+                const otherCosts = document.getElementById('settingsOtherCosts').value;
+                const driverFoodCost = document.getElementById('settingsDriverFoodCost').value;
+                const baseCurrency = document.getElementById('settingsBaseCurrency').value;
+                const rateEurMdl = document.getElementById('settingsRateEurMdl').value;
+                const rateEurRub = document.getElementById('settingsRateEurRub').value;
+                showLoader('Сохранение параметров...');
+                try {
+                    await makeGoogleScriptRequest('updateTripSettings', { tripDate, direction, basePrice, fuelCost, foodCost, otherCosts, driverFoodCost, baseCurrency, rateEurMdl, rateEurRub });
+                    showSuccess('Параметры сохранены');
+                } catch (e) { showError(e.message || e); } finally { hideLoader(); }
+            }
+
+            // Code lookup (admin, full info)
+            async function lookupByCode(mask = false) {
+                const code = document.getElementById('lookupCode').value.trim();
+                if (!code) { showError('Введите код'); return; }
+                showLoader('Поиск...');
+                try {
+                    const booking = await makeGoogleScriptRequest('getBookingByCode', { code, mask: String(mask) });
+                    const box = document.getElementById('lookupResult');
+                    if (!booking) { box.innerHTML = '<div class="no-data">Не найдено</div>'; return; }
+                    box.innerHTML = `
+                        <div class="booking-card">
+                            <div class="card-header"><div class="seat-info"><div class="seat-number">${booking.seat}</div></div><span class="status-badge ${getStatusClass(booking.status)}">${booking.status}</span></div>
+                            <div class="booking-details">
+                                <div class="detail-item"><span class="detail-label">Дата рейса</span><span class="detail-value">${formatTripDate(booking.tripDate)}</span></div>
+                                <div class="detail-item"><span class="detail-label">Пассажир</span><span class="detail-value">${booking.name || '-'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Телефон</span><span class="detail-value">${booking.phone || '-'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${booking.email || '-'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Маршрут</span><span class="detail-value">${booking.fromCity || '-'} → ${booking.toCity || '-'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Дата брони</span><span class="detail-value">${booking.time || '-'}</span></div>
+                                <div class="detail-item"><span class="detail-label">Код</span><span class="detail-value">${booking.code || '-'}</span></div>
+                            </div>
+                        </div>`;
+                } catch (e) { showError(e.message || e); } finally { hideLoader(); }
             }
 
             function showLoader(message = "Загрузка...") {
                 document.querySelector(".loader-text").textContent = message;
                 document.getElementById("loader").classList.add("active");
             }
-
-            function hideLoader() {
-                document.getElementById("loader").classList.remove("active");
-            }
-
-            function showError(message) {
-                // Simple error display - you could enhance this with a proper toast system
-                alert("Ошибка: " + message);
-            }
-
-            function showSuccess(message) {
-                // Simple success display - you could enhance this with a proper toast system
-                alert("Успех: " + message);
-            }
+            function hideLoader() { document.getElementById("loader").classList.remove("active"); }
+            function showError(message) { alert("Ошибка: " + message); }
+            function showSuccess(message) { alert("Успех: " + message); }
         </script>
     </body>
 </html>

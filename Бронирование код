@@ -687,6 +687,7 @@
                     <label for="tripDate">Дата рейса</label>
                     <input type="date" id="tripDate" required>
                 </div>
+                <div class="info-box" id="directionInfo" style="display:none"></div>
                 <button type="button" class="btn btn-secondary" onclick="loadSeats()">
                     <i class="fas fa-search"></i>
                     Найти места
@@ -822,6 +823,25 @@
                 </div>
             </form>
         </div>
+
+        <!-- Booking code lookup -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fas fa-qrcode"></i>
+                Проверить бронь по коду
+            </div>
+            <div class="input-group">
+                <label for="checkCode">Код брони</label>
+                <input type="text" id="checkCode" placeholder="Например, AB2C3D7">
+            </div>
+            <div class="button-group">
+                <button type="button" class="btn btn-secondary" onclick="checkBookingByCode()">
+                    <i class="fas fa-search"></i>
+                    Проверить
+                </button>
+            </div>
+            <div id="checkResult" style="margin-top:15px"></div>
+        </div>
     </div>
 
     <div class="contact-info">
@@ -841,7 +861,7 @@
 
     <script>
         // Configuration
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwftwfVoO4mWrnWUDTn4MQh1a0cMHZOYGwL8duboH6UD9_CzHlo-2qY5CWNnbkm8JjkwQ/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4mxF8WVsobklKyE82Woe4fFeD6lvN7WoynwDvhC1D3FPBnlsOs9iuvQ_ByYPDdjX3aQ/exec';
         
         // State management
         let selectedSeat = null;
@@ -854,6 +874,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeApp();
             setMinDate();
+            setupDateValidation();
         });
 
         async function initializeApp() {
@@ -872,6 +893,48 @@
             document.getElementById('tripDate').min = today;
         }
 
+        function setupDateValidation() {
+            const dateInput = document.getElementById('tripDate');
+            dateInput.addEventListener('change', () => {
+                const value = dateInput.value;
+                if (!value) return;
+                const d = new Date(value + 'T00:00:00');
+                if (!isAllowedTripDate(d)) {
+                    const adjusted = nextAllowedDate(d);
+                    dateInput.value = adjusted.toISOString().split('T')[0];
+                    showError('Доступны только рейсы по вторникам и субботам. Дата изменена автоматически.');
+                }
+                updateDirectionInfo();
+            });
+        }
+
+        function isAllowedTripDate(d) {
+            const dow = d.getUTCDay(); // 0..6
+            return dow === 2 || dow === 6; // Tue or Sat
+        }
+
+        function nextAllowedDate(d) {
+            const nd = new Date(d);
+            for (let i = 0; i < 7; i++) {
+                nd.setUTCDate(nd.getUTCDate() + 1);
+                if (isAllowedTripDate(nd)) return nd;
+            }
+            return d;
+        }
+
+        function updateDirectionInfo() {
+            const dateStr = document.getElementById('tripDate').value;
+            const box = document.getElementById('directionInfo');
+            if (!dateStr) { box.style.display = 'none'; return; }
+            const d = new Date(dateStr + 'T00:00:00');
+            const dow = d.getUTCDay();
+            let dir = '';
+            if (dow === 6) dir = 'Направление: Молдова → Россия (суббота)';
+            if (dow === 2) dir = 'Направление: Россия → Молдова (вторник)';
+            box.textContent = dir || '';
+            box.style.display = dir ? 'block' : 'none';
+        }
+
         async function loadCities() {
             try {
                 cities = await makeGoogleScriptRequest('getCities');
@@ -888,7 +951,6 @@
             const fromCitySelect = document.getElementById('fromCity');
             const toCitySelect = document.getElementById('toCity');
             
-            // Clear existing options except the first one
             fromCitySelect.innerHTML = '<option value="">Выберите город</option>';
             toCitySelect.innerHTML = '<option value="">Выберите город</option>';
             
@@ -912,6 +974,15 @@
                 showError('Выберите дату рейса');
                 return;
             }
+            // Enforce only Tue/Sat
+            const d = new Date(tripDate + 'T00:00:00');
+            if (!isAllowedTripDate(d)) {
+                const adjusted = nextAllowedDate(d);
+                document.getElementById('tripDate').value = adjusted.toISOString().split('T')[0];
+                updateDirectionInfo();
+                showError('Доступны только рейсы по вторникам и субботам. Дата изменена автоматически.');
+                return;
+            }
 
             showLoader('Загрузка мест...');
             
@@ -921,6 +992,7 @@
                 
                 renderSeatMap();
                 document.getElementById('seatMapContainer').style.display = 'block';
+                updateDirectionInfo();
                 validateAndEnableSubmit();
                 
             } catch (error) {
@@ -948,12 +1020,10 @@
                 seatElement.textContent = i;
                 seatElement.onclick = () => selectSeat(i, seat);
                 
-                // Add aisle break after seats 2 and 4 in each row
                 if (i % 4 === 2) {
                     seatElement.classList.add('aisle-break');
                 }
                 
-                // Disable non-free seats
                 if (seat.status !== 'свободно') {
                     seatElement.disabled = true;
                 }
@@ -967,12 +1037,10 @@
                 return;
             }
 
-            // Remove previous selection
             document.querySelectorAll('.seat.selected').forEach(seat => {
                 seat.classList.remove('selected');
             });
 
-            // Select new seat
             const seatElement = document.querySelector(`.seat:nth-child(${seatNumber})`);
             if (seatElement) {
                 seatElement.classList.add('selected');
@@ -994,7 +1062,6 @@
             const toCity = document.getElementById('toCity').value;
             const luggageWeight = parseInt(document.getElementById('luggageWeight').value) || 50;
             
-            // Calculate luggage extra fee
             const luggageExtra = Math.max(0, luggageWeight - 50) * 5;
             currentTotalPrice = selectedSeat.basePrice + luggageExtra;
 
@@ -1015,27 +1082,22 @@
         }
 
         function cancelBooking() {
-            // Reset selection
             selectedSeat = null;
             currentTripDate = null;
             
-            // Clear form
             document.getElementById('bookingForm').reset();
             document.getElementById('tripDate').value = '';
+            document.getElementById('directionInfo').style.display = 'none';
             
-            // Hide summary and seat map
             document.getElementById('bookingSummary').style.display = 'none';
             document.getElementById('seatMapContainer').style.display = 'none';
             
-            // Remove seat selections
             document.querySelectorAll('.seat.selected').forEach(seat => {
                 seat.classList.remove('selected');
             });
             
-            // Disable submit button
             document.getElementById('submitBtn').disabled = true;
             
-            // Reset luggage to defaults
             document.getElementById('luggageWeight').value = 50;
             document.getElementById('luggagePieces').value = 1;
         }
@@ -1048,7 +1110,6 @@
                 return;
             }
 
-            // Get form data
             const name = document.getElementById('name').value.trim();
             const phone = document.getElementById('phone').value.trim();
             const email = document.getElementById('email').value.trim();
@@ -1057,20 +1118,17 @@
             const luggageWeight = document.getElementById('luggageWeight').value;
             const luggagePieces = document.getElementById('luggagePieces').value;
 
-            // Validate required fields
             if (!name || !phone || !email || !fromCity || !toCity) {
                 showError('Заполните все обязательные поля');
                 return;
             }
 
-            // Validate phone number format
             const phoneRegex = /^(\+373|373|0)?[0-9]{8,9}$/;
             if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
                 showError('Введите корректный номер телефона');
                 return;
             }
 
-            // Validate email
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 showError('Введите корректный email адрес');
@@ -1085,7 +1143,7 @@
             showLoader('Оформление бронирования...');
             
             try {
-                await makeGoogleScriptRequest('bookSeat', {
+                const res = await makeGoogleScriptRequest('bookSeat', {
                     tripDate: currentTripDate,
                     seat: selectedSeat.number,
                     name,
@@ -1097,14 +1155,43 @@
                     luggagePieces
                 });
 
-                showSuccess('Бронирование успешно оформлено! Мы свяжемся с вами для подтверждения.');
+                const code = res && res.code ? res.code : '';
+                showSuccessHTML(`<i class="fas fa-check-circle"></i> Бронирование успешно оформлено! Ваш код: <strong>${code}</strong>. Сохраните его для проверки статуса.`);
                 
-                // Reset form
                 cancelBooking();
-                loadSeats(); // Reload to show updated seat status
+                loadSeats();
                 
             } catch (error) {
                 showError('Ошибка бронирования: ' + error.message);
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function checkBookingByCode() {
+            const code = document.getElementById('checkCode').value.trim();
+            if (!code) { showError('Введите код'); return; }
+            showLoader('Поиск брони...');
+            try {
+                const booking = await makeGoogleScriptRequest('getBookingByCode', { code, mask: 'true' });
+                const box = document.getElementById('checkResult');
+                if (!booking) {
+                    box.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Бронь не найдена</div>';
+                    return;
+                }
+                box.innerHTML = `
+                    <div class="booking-summary">
+                        <div class="summary-item"><span class="label">Код</span><span class="value">${booking.code}</span></div>
+                        <div class="summary-item"><span class="label">Дата рейса</span><span class="value">${booking.tripDate}</span></div>
+                        <div class="summary-item"><span class="label">Место</span><span class="value">${booking.seat}</span></div>
+                        <div class="summary-item"><span class="label">Статус</span><span class="value">${booking.status}</span></div>
+                        <div class="summary-item"><span class="label">Пассажир</span><span class="value">${booking.name || '-'}</span></div>
+                        <div class="summary-item"><span class="label">Телефон</span><span class="value">${booking.phone || '-'}</span></div>
+                        <div class="summary-item"><span class="label">Email</span><span class="value">${booking.email || '-'}</span></div>
+                        <div class="summary-item"><span class="label">Маршрут</span><span class="value">${(booking.fromCity||'?')} → ${(booking.toCity||'?')}</span></div>
+                    </div>`;
+            } catch (e) {
+                showError('Ошибка поиска: ' + (e.message || e));
             } finally {
                 hideLoader();
             }
@@ -1175,39 +1262,30 @@
         }
 
         function showError(message) {
-            // Create error message element
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
             errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
-            
-            // Insert at the top of the container
             const container = document.querySelector('.container');
             container.insertBefore(errorDiv, container.firstChild);
-            
-            // Remove after 5 seconds
-            setTimeout(() => {
-                if (errorDiv.parentNode) {
-                    errorDiv.parentNode.removeChild(errorDiv);
-                }
-            }, 5000);
+            setTimeout(() => { if (errorDiv.parentNode) { errorDiv.parentNode.removeChild(errorDiv); } }, 5000);
         }
 
         function showSuccess(message) {
-            // Create success message element
             const successDiv = document.createElement('div');
             successDiv.className = 'success-message';
             successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-            
-            // Insert at the top of the container
             const container = document.querySelector('.container');
             container.insertBefore(successDiv, container.firstChild);
-            
-            // Remove after 5 seconds
-            setTimeout(() => {
-                if (successDiv.parentNode) {
-                    successDiv.parentNode.removeChild(successDiv);
-                }
-            }, 5000);
+            setTimeout(() => { if (successDiv.parentNode) { successDiv.parentNode.removeChild(successDiv); } }, 7000);
+        }
+
+        function showSuccessHTML(html) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.innerHTML = html;
+            const container = document.querySelector('.container');
+            container.insertBefore(successDiv, container.firstChild);
+            setTimeout(() => { if (successDiv.parentNode) { successDiv.parentNode.removeChild(successDiv); } }, 10000);
         }
     </script>
 </body>
