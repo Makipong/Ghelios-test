@@ -1,0 +1,545 @@
+const SETTINGS_SHEET = "Settings";
+const STATUS_FREE = "свободно";
+const STATUS_BOOKED = "забронировано";
+const STATUS_CONFIRMED = "подтверждено";
+const CACHE_EXPIRATION = 300;
+
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    const callback = e.parameter.callback;
+    let result;
+    
+    if (!action) {
+      throw new Error("No action specified");
+    }
+    
+    switch(action) {
+      case "getSeats":
+        const tripDate = e.parameter.tripDate;
+        if (!tripDate) {
+          throw new Error("tripDate parameter is required");
+        }
+        result = getSeatsForTrip(tripDate);
+        break;
+        
+      case "bookSeat":
+        const bookTripDate = e.parameter.tripDate;
+        const seat = e.parameter.seat;
+        const name = e.parameter.name;
+        const phone = e.parameter.phone;
+        const email = e.parameter.email;
+        const fromCity = e.parameter.fromCity;
+        const toCity = e.parameter.toCity;
+        const luggageWeight = e.parameter.luggageWeight;
+        const luggagePieces = e.parameter.luggagePieces;
+        
+        if (!bookTripDate || !seat || !name || !phone || !email || !fromCity || !toCity) {
+          throw new Error("Недостаточно данных");
+        }
+        
+        result = bookSeat(bookTripDate, seat, name, phone, email, fromCity, toCity, luggageWeight, luggagePieces);
+        break;
+        
+      case "confirmBooking":
+        if (!e.parameter.tripDate || !e.parameter.seat) throw "Не указаны данные";
+        confirmBooking(e.parameter.tripDate, e.parameter.seat);
+        result = { success: true };
+        break;
+        
+      case "cancelBooking":
+        if (!e.parameter.tripDate || !e.parameter.seat) throw "Не указаны данные";
+        cancelBooking(e.parameter.tripDate, e.parameter.seat);
+        result = { success: true };
+        break;
+        
+      case "updateBooking":
+        if (!e.parameter.tripDate || !e.parameter.seat) throw "Не указаны данные";
+        updateBooking(
+          e.parameter.tripDate,
+          e.parameter.seat,
+          e.parameter.name,
+          e.parameter.phone,
+          e.parameter.email,
+          e.parameter.fromCity,
+          e.parameter.toCity,
+          e.parameter.luggageWeight,
+          e.parameter.luggagePieces,
+          e.parameter.actualPrice
+        );
+        result = { success: true };
+        break;
+        
+      case "getTripDates":
+        result = getAllTripDates();
+        break;
+        
+      case "getTripSettings":
+        result = getTripSettings(e.parameter.tripDate);
+        break;
+        
+      case "updateTripSettings":
+        updateTripSettings(
+          e.parameter.tripDate,
+          e.parameter.direction,
+          e.parameter.basePrice,
+          e.parameter.fuelCost,
+          e.parameter.foodCost,
+          e.parameter.otherCosts
+        );
+        result = { success: true };
+        break;
+        
+      case "getCities":
+        result = getCitiesList();
+        break;
+        
+      case "getTripStats":
+        result = getTripStats();
+        break;
+        
+      default:
+        throw new Error("Неизвестное действие: " + action);
+    }
+    
+    if (callback) {
+      return ContentService.createTextOutput(`${callback}(${JSON.stringify(result)})`)
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    } else {
+      return buildResponse(result);
+    }
+  } catch (err) {
+    const errorResponse = { error: err.toString() };
+    if (e.parameter.callback) {
+      return ContentService.createTextOutput(`${e.parameter.callback}(${JSON.stringify(errorResponse)})`)
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    } else {
+      return buildResponse(errorResponse);
+    }
+  }
+}
+
+// Получить все даты рейсов
+function getAllTripDates() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  const tripDates = [];
+  
+  for (const sheet of sheets) {
+    const sheetName = sheet.getName();
+    if (sheetName !== SETTINGS_SHEET && !isNaN(Date.parse(sheetName))) {
+      tripDates.push(sheetName);
+    }
+  }
+  
+  return tripDates.sort((a, b) => new Date(a) - new Date(b));
+}
+
+// Получить список городов
+function getCitiesList() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SETTINGS_SHEET);
+  
+  if (!settingsSheet) {
+    createSettingsSheet();
+    return getCitiesList();
+  }
+  
+  const cities = settingsSheet.getRange("B2:B46").getValues()
+    .flat()
+    .filter(city => city !== "");
+  
+  return cities;
+}
+
+// Создать лист настроек при первом запуске
+function createSettingsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.insertSheet(SETTINGS_SHEET);
+  
+  // Заголовки
+  settingsSheet.getRange("A1").setValue("Параметр");
+  settingsSheet.getRange("B1").setValue("Значение");
+  
+  // Список городов в колонке B
+  settingsSheet.getRange("B1").setValue("Города");
+  
+  // Стандартные настройки
+  settingsSheet.getRange("A3").setValue("Багаж (норма кг)");
+  settingsSheet.getRange("B3").setValue(50);
+  settingsSheet.getRange("A4").setValue("Цена за кг багажа");
+  settingsSheet.getRange("B4").setValue(5);
+  
+  // Заголовки для рейсов
+  settingsSheet.getRange("A7").setValue("Дата рейса");
+  settingsSheet.getRange("B7").setValue("Направление");
+  settingsSheet.getRange("C7").setValue("Базовая цена");
+  settingsSheet.getRange("D7").setValue("Расход топливо");
+  settingsSheet.getRange("E7").setValue("Расход еда");
+  settingsSheet.getRange("F7").setValue("Доп расходы");
+}
+
+// Получить настройки рейса
+function getTripSettings(tripDate) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SETTINGS_SHEET);
+  
+  if (!settingsSheet) {
+    createSettingsSheet();
+    return getTripSettings(tripDate);
+  }
+  
+  const data = settingsSheet.getRange("A8:F" + settingsSheet.getLastRow()).getValues();
+  const trip = data.find(row => row[0] === tripDate);
+  
+  if (!trip) return null;
+  
+  return {
+    direction: trip[1],
+    basePrice: trip[2],
+    fuelCost: trip[3],
+    foodCost: trip[4],
+    otherCosts: trip[5]
+  };
+}
+
+// Обновить настройки рейса
+function updateTripSettings(tripDate, direction, basePrice, fuelCost, foodCost, otherCosts) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const settingsSheet = ss.getSheetByName(SETTINGS_SHEET);
+  
+  if (!settingsSheet) createSettingsSheet();
+  
+  const dates = settingsSheet.getRange("A8:A" + settingsSheet.getLastRow()).getValues().flat();
+  const rowIndex = dates.indexOf(tripDate);
+  
+  if (rowIndex === -1) {
+    // Новая запись
+    const lastRow = settingsSheet.getLastRow() + 1;
+    settingsSheet.getRange(lastRow, 1).setValue(tripDate);
+    settingsSheet.getRange(lastRow, 2).setValue(direction);
+    settingsSheet.getRange(lastRow, 3).setValue(basePrice);
+    settingsSheet.getRange(lastRow, 4).setValue(fuelCost);
+    settingsSheet.getRange(lastRow, 5).setValue(foodCost);
+    settingsSheet.getRange(lastRow, 6).setValue(otherCosts);
+  } else {
+    // Обновление существующей
+    const row = rowIndex + 8;
+    settingsSheet.getRange(row, 2).setValue(direction);
+    settingsSheet.getRange(row, 3).setValue(basePrice);
+    settingsSheet.getRange(row, 4).setValue(fuelCost);
+    settingsSheet.getRange(row, 5).setValue(foodCost);
+    settingsSheet.getRange(row, 6).setValue(otherCosts);
+  }
+}
+
+// Создать лист для нового рейса - ИСПРАВЛЕНО для предотвращения создания листов с направлением
+function createTripSheet(tripDate, direction, basePrice) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // Валидация: tripDate должен быть датой, а не направлением
+  if (!tripDate || isNaN(Date.parse(tripDate))) {
+    throw "Некорректная дата рейса. Укажите дату в формате YYYY-MM-DD";
+  }
+  
+  // Проверяем, не является ли tripDate направлением
+  if (tripDate.includes("→") || tripDate.toLowerCase().includes("молдова") || tripDate.toLowerCase().includes("россия")) {
+    throw "Ошибка: указано направление вместо даты рейса";
+  }
+  
+  // Проверяем существует ли лист
+  try {
+    const existingSheet = ss.getSheetByName(tripDate);
+    if (existingSheet) return existingSheet;
+  } catch(e) {}
+  
+  // Создаем новый лист
+  const newSheet = ss.insertSheet(tripDate);
+  
+  // Заголовки столбцов
+  const headers = [
+    "Место", "Статус", "Имя", "Телефон", "Email", "Дата брони",
+    "Город посадки", "Город высадки", "Цена", "Факт оплата",
+    "Багаж (кг)", "Места багажа", "Доплата багаж", "Комментарии"
+  ];
+  
+  newSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  
+  // Заполняем места
+  const seats = [];
+  for (let i = 1; i <= 60; i++) {
+    seats.push([i, STATUS_FREE, "", "", "", "", "", "", basePrice, "", "", "", "", ""]);
+  }
+  
+  newSheet.getRange(2, 1, 60, headers.length).setValues(seats);
+  
+  // Сохраняем направление в настройках
+  updateTripSettings(tripDate, direction, basePrice, 0, 0, 0);
+  
+  // Форматирование
+  newSheet.setFrozenRows(1);
+  newSheet.autoResizeColumns(1, headers.length);
+  
+  return newSheet;
+}
+
+// Получить данные о местах для рейса
+function getSeatsForTrip(tripDate) {
+  try {
+    if (!tripDate) {
+      throw new Error("Не указана дата рейса");
+    }
+    
+    const cache = CacheService.getScriptCache();
+    const cacheKey = `seats_${tripDate}`;
+    
+    try {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch(cacheError) {
+      console.log("Cache error:", cacheError);
+    }
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      throw new Error("Не удается получить доступ к таблице");
+    }
+    
+    let sheet = ss.getSheetByName(tripDate);
+    
+    if (!sheet) {
+      throw new Error(`Рейс на ${tripDate} не найден. Рейсы должны создаваться заранее администратором.`);
+    }
+    
+    const lastRow = Math.max(sheet.getLastRow() || 61, 61);
+    if (lastRow < 2) {
+      throw new Error(`Лист рейса ${tripDate} пуст или повреждён`);
+    }
+    
+    const data = sheet.getRange("A2:N" + lastRow).getValues();
+    
+    const result = data.map((row, index) => ({
+      seat: row[0] || (index + 1),
+      status: row[1] || STATUS_FREE,
+      name: row[2] || "",
+      phone: row[3] || "",
+      email: row[4] || "",
+      time: row[5] ? new Date(row[5]).toLocaleString("ru-RU") : "",
+      fromCity: row[6] || "",
+      toCity: row[7] || "",
+      basePrice: row[8] || 0,
+      actualPrice: row[9] || 0,
+      luggageWeight: row[10] || 0,
+      luggagePieces: row[11] || 0,
+      luggageExtra: row[12] || 0,
+      comments: row[13] || ""
+    }));
+    
+    try {
+      cache.put(cacheKey, JSON.stringify(result), CACHE_EXPIRATION);
+    } catch(cacheError) {
+      console.log("Cache put error:", cacheError);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error in getSeatsForTrip:", error);
+    throw new Error(`Ошибка загрузки данных рейса ${tripDate}: ${error.message}`);
+  }
+}
+
+// Бронирование места
+function bookSeat(tripDate, seat, name, phone, email, fromCity, toCity, luggageWeight, luggagePieces) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // НЕ создаем лист автоматически - рейс должен существовать
+  let sheet = ss.getSheetByName(tripDate);
+  if (!sheet) {
+    throw `Рейс на ${tripDate} не найден. Обратитесь к администратору для создания рейса.`;
+  }
+  
+  const seatNumber = Number(seat);
+  const seatNumbers = sheet.getRange("A2:A" + sheet.getLastRow()).getValues().flat();
+  const rowIndex = seatNumbers.indexOf(seatNumber);
+  
+  if (rowIndex === -1) throw "Место не найдено";
+  
+  const statusCell = sheet.getRange(rowIndex + 2, 2);
+  if (statusCell.getValue() !== STATUS_FREE) throw "Место уже занято";
+  
+  // Рассчитываем доплату за багаж
+  const settingsSheet = ss.getSheetByName(SETTINGS_SHEET);
+  const luggageAllowance = settingsSheet ? settingsSheet.getRange("B3").getValue() : 50;
+  const luggagePricePerKg = settingsSheet ? settingsSheet.getRange("B4").getValue() : 5;
+  
+  luggageWeight = luggageWeight ? Number(luggageWeight) : 0;
+  luggagePieces = luggagePieces ? Number(luggagePieces) : 0;
+  
+  const luggageExtra = Math.max(0, luggageWeight - luggageAllowance) * luggagePricePerKg;
+  
+  // Обновляем данные
+  statusCell.setValue(STATUS_BOOKED);
+  sheet.getRange(rowIndex + 2, 3).setValue(name);
+  sheet.getRange(rowIndex + 2, 4).setValue(phone);
+  sheet.getRange(rowIndex + 2, 5).setValue(email);
+  sheet.getRange(rowIndex + 2, 6).setValue(new Date());
+  sheet.getRange(rowIndex + 2, 7).setValue(fromCity);
+  sheet.getRange(rowIndex + 2, 8).setValue(toCity);
+  sheet.getRange(rowIndex + 2, 11).setValue(luggageWeight);
+  sheet.getRange(rowIndex + 2, 12).setValue(luggagePieces);
+  sheet.getRange(rowIndex + 2, 13).setValue(luggageExtra);
+  
+  // Очищаем кеш
+  CacheService.getScriptCache().remove(`seats_${tripDate}`);
+  
+  return { success: true };
+}
+
+// Подтвердить бронирование
+function confirmBooking(tripDate, seat) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(tripDate);
+  
+  if (!sheet) throw "Рейс не найден";
+  
+  const seatNumber = Number(seat);
+  const seatNumbers = sheet.getRange("A2:A" + sheet.getLastRow()).getValues().flat();
+  const rowIndex = seatNumbers.indexOf(seatNumber);
+  
+  if (rowIndex === -1) throw "Место не найдено";
+  
+  const statusCell = sheet.getRange(rowIndex + 2, 2);
+  if (statusCell.getValue() !== STATUS_BOOKED) {
+    throw "Можно подтвердить только забронированные места";
+  }
+  
+  statusCell.setValue(STATUS_CONFIRMED);
+  
+  // Очищаем кеш
+  CacheService.getScriptCache().remove(`seats_${tripDate}`);
+}
+
+// Отменить бронирование
+function cancelBooking(tripDate, seat) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(tripDate);
+  
+  if (!sheet) throw "Рейс не найден";
+  
+  const seatNumber = Number(seat);
+  const seatNumbers = sheet.getRange("A2:A" + sheet.getLastRow()).getValues().flat();
+  const rowIndex = seatNumbers.indexOf(seatNumber);
+  
+  if (rowIndex === -1) throw "Место не найдено";
+  
+  const row = rowIndex + 2;
+  
+  // Очищаем все данные бронирования
+  sheet.getRange(row, 2).setValue(STATUS_FREE);
+  sheet.getRange(row, 3).setValue("");
+  sheet.getRange(row, 4).setValue("");
+  sheet.getRange(row, 5).setValue("");
+  sheet.getRange(row, 6).setValue("");
+  sheet.getRange(row, 7).setValue("");
+  sheet.getRange(row, 8).setValue("");
+  sheet.getRange(row, 10).setValue("");
+  sheet.getRange(row, 11).setValue("");
+  sheet.getRange(row, 12).setValue("");
+  sheet.getRange(row, 13).setValue("");
+  sheet.getRange(row, 14).setValue("");
+  
+  // Очищаем кеш
+  CacheService.getScriptCache().remove(`seats_${tripDate}`);
+}
+
+// Обновить бронирование
+function updateBooking(tripDate, seat, name, phone, email, fromCity, toCity, luggageWeight, luggagePieces, actualPrice) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(tripDate);
+  
+  if (!sheet) throw "Рейс не найден";
+  
+  const seatNumber = Number(seat);
+  const seatNumbers = sheet.getRange("A2:A" + sheet.getLastRow()).getValues().flat();
+  const rowIndex = seatNumbers.indexOf(seatNumber);
+  
+  if (rowIndex === -1) throw "Место не найдено";
+  
+  const row = rowIndex + 2;
+  
+  // Обновляем данные
+  if (name) sheet.getRange(row, 3).setValue(name);
+  if (phone) sheet.getRange(row, 4).setValue(phone);
+  if (email) sheet.getRange(row, 5).setValue(email);
+  if (fromCity) sheet.getRange(row, 7).setValue(fromCity);
+  if (toCity) sheet.getRange(row, 8).setValue(toCity);
+  if (actualPrice) sheet.getRange(row, 10).setValue(Number(actualPrice));
+  if (luggageWeight) sheet.getRange(row, 11).setValue(Number(luggageWeight));
+  if (luggagePieces) sheet.getRange(row, 12).setValue(Number(luggagePieces));
+  
+  // Пересчитываем доплату за багаж
+  if (luggageWeight) {
+    const settingsSheet = ss.getSheetByName(SETTINGS_SHEET);
+    const luggageAllowance = settingsSheet ? settingsSheet.getRange("B3").getValue() : 50;
+    const luggagePricePerKg = settingsSheet ? settingsSheet.getRange("B4").getValue() : 5;
+    const luggageExtra = Math.max(0, Number(luggageWeight) - luggageAllowance) * luggagePricePerKg;
+    sheet.getRange(row, 13).setValue(luggageExtra);
+  }
+  
+  // Очищаем кеш
+  CacheService.getScriptCache().remove(`seats_${tripDate}`);
+}
+
+// Получить статистику по всем рейсам
+function getTripStats() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  let totalTrips = 0;
+  let totalSeats = 0;
+  let bookedSeats = 0;
+  let confirmedSeats = 0;
+  let freeSeats = 0;
+  
+  for (const sheet of sheets) {
+    const sheetName = sheet.getName();
+    if (sheetName !== SETTINGS_SHEET && !isNaN(Date.parse(sheetName))) {
+      totalTrips++;
+      const data = sheet.getRange("A2:B" + Math.max(sheet.getLastRow(), 61)).getValues();
+      
+      data.forEach(row => {
+        const seatNumber = row[0];
+        const status = row[1];
+        
+        if (seatNumber && typeof seatNumber === 'number' && seatNumber >= 1 && seatNumber <= 60) {
+          totalSeats++;
+          switch (status) {
+            case STATUS_BOOKED:
+              bookedSeats++;
+              break;
+            case STATUS_CONFIRMED:
+              confirmedSeats++;
+              break;
+            case STATUS_FREE:
+              freeSeats++;
+              break;
+          }
+        }
+      });
+    }
+  }
+  
+  return {
+    totalTrips,
+    totalSeats,
+    bookedSeats,
+    confirmedSeats,
+    freeSeats
+  };
+}
+
+function buildResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
